@@ -1,0 +1,201 @@
+---
+title: "To what extent parents' education level is important as a determinant of child's education level?"
+author: "Komilov Khikmatillo Nurillo Ugli"
+date: "1A222G24-8"
+output: pdf_document
+fontsize: 12pt 
+header-includes:
+  - \pagenumbering{gobble}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{=tex}
+\newpage
+\pagenumbering{arabic}
+```
+## 1. Introduction
+
+Parents are considered to have a significant impact on their children during their early growth and after since children learn by observing everyone around them. Specifically, parents' educational background can shape a child's academic aspirations and development in the future. There are many factors influence this relationship, making it not so easy task to analyze. In spite of this, understanding such a connection between parents and their children can be helpful in shaping the educational outcomes for future generations. 
+
+This report tries to analyze the impact of parents' education level on children's level of schooling.Roadmap
+
+
+
+
+## 2. Data
+
+```{r data, include = FALSE}
+library(tidyverse)
+library(modelsummary)
+library(gt)
+library(xtable)
+library(kableExtra)
+library(summarytools)
+library(corrplot)
+ 
+data <- read.csv("/Users/khikmat/Desktop/GSSdata2018.csv")
+head(data)
+dim(data)
+
+data <- data %>% select(EDUC,AGE, INCOME, PAEDUC, MAEDUC, SEX)
+data <- data %>% mutate(income =
+  500*(INCOME == 1) + 
+	1000*(INCOME == 2) + 
+	3000*(INCOME == 3) + 
+	4000*(INCOME == 4) + 
+	5000*(INCOME == 5) + 
+	6000*(INCOME == 6) + 
+	7000*(INCOME == 7) + 
+	8000*(INCOME == 8) + 
+	10000*(INCOME == 9) + 
+	15000*(INCOME == 10) +
+	20000*(INCOME == 11) +  
+	25000*(INCOME == 12) )
+
+mdata <- data %>% filter(SEX == 1)
+fdata <- data %>% filter(SEX == 2)
+
+var_description <- data.frame(
+  Variable = c("EDUC", "AGE", "PAEDUC", "MAEDUC", "INCOME"),
+  Definition = c("highest year of school completed, respondent", "respondent's age", "highest year of school completed, father", "highest year of school completed, mother", "family income in USD")
+)
+```
+
+The data used in this report is cross-sectional data for 536 individuals  obtained from the General Social Survey (GSS), which is available for public at https://gssdataexplorer.norc.org/. The independent variables used are PAEDUC, MAEDUC, and INCOME, while independent one is EDUC, which are described in the following Table 1 together with their definitions. 
+
+
+```{r table1, echo=FALSE}
+kbl(var_description, format = "latex", booktabs = T, caption = "Variables and Definitions") %>%
+kable_styling(full_width = F, latex_options = "HOLD_position") %>%
+  row_spec(0, bold = T)
+```
+
+Table 2 shows descriptive statistics of each variable. First of all, we can see that the average age of respondents was 48-49 years old, while youngest is 18 and eldest being 89 years old. Secondly, on average, respondents completed almost between 13 and 14 years of school, with minimum and maximium of 0 and 20, respectively. Average income earned constituted about 21500 USD. Minimum income earned was 500 USD, while maximum being 25000 USD. Mothers of respondents, on average, completed around 10 years of school, while fathers did 8 years. Maximum years of schooling completed was 20 years for both fathers and mothers. 
+
+```{r summary1, echo=FALSE}
+summ1 <- descr(data[,-c(3,6)],stats = c("mean", "med", "sd", "min", "max"), transpose = TRUE)
+
+kbl(summ1, format = "latex", digits = 2, booktabs = T, caption = "Descriptive Statistics") %>%
+  kable_styling(full_width = F, latex_options = "HOLD_position") %>%
+  row_spec(0, bold = T)
+```
+
+Table 3 and Table 4 represent descriptive statistics for male and female respondents, respectively. 
+
+```{r summary2, echo=FALSE}
+summ2 <- descr(mdata[,-c(3,6)],stats = c("mean", "med", "sd", "min", "max"), transpose = TRUE)
+
+kbl(summ2, format = "latex", digits = 2, booktabs = T, caption = "Descriptive Statistics for Male respondents") %>%
+  kable_styling(full_width = F, latex_options = "HOLD_position") %>%
+  row_spec(0, bold = T)
+```
+
+```{r summary3, echo=FALSE}
+summ3 <- descr(fdata[,-c(3,6)],stats = c("mean", "med", "sd", "min", "max"), transpose = TRUE)
+
+kbl(summ3, format = "latex", digits = 2, booktabs = T, caption = "Descriptive Statistics for Female respondents") %>%
+  kable_styling(full_width = F, latex_options = "HOLD_position") %>%
+  row_spec(0, bold = T)
+```
+
+The matrix below displays correlation between our dependent variables. As we can see, the only point which stands out is the correlation between MAEDUC and PAEDUC equal to 0.32, which is considered to be weak. Therefore, we can conclude that there is not a strong correlation observed between our dependent variables. 
+
+```{r echo=FALSE, out.width="50%"}
+
+corrplot(cor(data[,-c(1,3,6,8)]), method = "number",  type = "lower")
+
+```
+
+
+
+
+```{r echo=FALSE, out.width="50%"}
+library(tidyverse)
+ggplot(data, aes(EDUC)) +
+geom_bar() +
+ggtitle("Fig 2.")+
+ylab("Respondents")
+
+combined_data <- rbind(transform(mdata, gender = "Male"), transform(fdata, gender = "Female"))
+
+ggplot(combined_data, aes(x = EDUC, fill = gender)) +
+  geom_bar(position = "dodge",stat = "count") +
+  ylab("Respondents") +
+  labs(title = "Fig 3. EDUC grouped by SEX") +
+  scale_fill_manual(values = c("Male" = "blue", "Female" = "pink"))
+```
+
+
+
+
+```{r echo=FALSE, out.width="50%", warning=FALSE, message=FALSE}
+ggplot(data, aes(PAEDUC, EDUC)) + geom_point() + geom_smooth(method = lm) + labs(title = "Fig 4. EDUC vs. PAEDUC") +
+  theme(plot.title = element_text(family = "serif"))
+
+ggplot(data, aes(MAEDUC, EDUC)) + geom_point() + geom_smooth(method = lm) +
+  labs(title = "Fig 5. EDUC vs. MAEDUC")+  
+  theme(plot.title = element_text(family = "serif"))
+
+```
+
+\newpage
+
+## 3. Estimation Results
+
+The four economic models estimated are given below in equation form: 
+
+Model 1.$$ \;\;\;\;maleEDUC = \beta_0 + AGE\beta_1 + PAEDUC\beta_2 + MAEDUC\beta_3 $$
+Model 2.$$\;\;\;\;maleEDUC = \beta_0 + AGE\beta_1 + PAEDUC\beta_2 + MAEDUC\beta_3 + income\beta_4 $$
+Model 3.$$\;\;\;\;femaleEDUC = \beta_0 + AGE\beta_1 + PAEDUC\beta_2 + MAEDUC\beta_3 $$
+Model 4. $$ \;\;\;\;femaleEDUC = \beta_0 + AGE\beta_1 + PAEDUC\beta_2 + MAEDUC\beta_3 + income\beta_4 $$
+
+
+```{r, echo=FALSE}
+library(modelsummary)
+models <- list()
+models[["maleEDUC"]] <- lm(EDUC ~ AGE + PAEDUC + MAEDUC, mdata)
+models[["male_incomeEDUC"]]   <- lm(EDUC ~ AGE + PAEDUC + MAEDUC + income, mdata)
+models[["female_edu"]] <- lm(EDUC ~ AGE + PAEDUC + MAEDUC, fdata)
+models[["female_incomeEDUC"]]   <- lm(EDUC ~ AGE + PAEDUC + MAEDUC + income, fdata)
+```
+
+
+Table 5 shows regression results. In the first model, I regress education level of male respondents on age, their fathers’ education level, their mothers’ education level. As we can see in Table 5, the coefficient on the number of years of schooling obtained by respondents’ father and mother is positive and statistically significant in our first model. However, its magnitude is really small. For instance, a 10 year increase in both father’s and mother’s education level constitutes only around 1.7 and 1.9 years increase in respondent’s education level, respectively. If we add family income to our model, which is Model 2, we can see that the coefficient of income is equal to 0, meaning that income does not have an effect on years of schooling obtained by respondents. And other coefficients do not show significant change compared to the Model 1. Now, let’s take a look at other two models for female respondents. In Model 3, the coefficients on the education levels of father and mother are 0.06 and 0.21, respectively. Although they are statistically significant, their magnitude is also very small. In Model 4, the coefficient on the income is also equal to 0, while coefficients for PAEDUC and MAEDUC are 0.04 and 0.196. However, one notable thing in models 3 and 4 compared to previous ones is that the coefficients for MAEDUC are larger than coefficients for PAEDUC in Models 3 and 4 compared to models 1 and 2. In others words, for female respondents their mothers’ education level has larger effect than their fathers’ education level on their number of years of schooling obtained.  
+
+
+```{r echo=FALSE}
+
+modelsummary(models,
+gof_omit = "Log.Lik.|AIC|BIC|F|RMSE",
+stars = TRUE,
+notes = "Standard errors in parentheses.",
+title = "Estimation Results",
+output = "default") %>% kable_styling(latex_options = c("HOLD_position"))
+
+```
+
+
+
+```{=tex}
+\pagenumbering{gobble}
+```
+## 4. Conclusion
+
+
+In conclusion, the analysis suggest that number of years of school completed by parents has a positive and statistically significant impact on their childrens' education level obtained. However, the scale of the effect is very small. Moreover, results show that change in income does not affect respondents' education levels. Intuitively, since elementary and high school are provided for free by government income is not likely to have any impact. Another point worth mentioning is that in females, mothers' education level has larger impact than their fathers' education level compared to male respondents. It may be explained by the fact that girls tend to see their mothers as role models in most cases. 
+
+
+\newpage
+
+## References
+
+-   
+
+
+
+\newpage
+## Appendix
